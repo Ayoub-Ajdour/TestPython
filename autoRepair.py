@@ -6,6 +6,9 @@ import subprocess
 github_token = os.getenv('GH_TOKEN')
 openai_api_key = os.getenv('OPENAI_API_KEY')
 
+# Set the OpenAI API key for the session
+openai.api_key = openai_api_key  # Use the OpenAI API key from secrets
+
 def get_last_build_error():
     """Reads the last pipeline error log from errors.txt"""
     try:
@@ -16,24 +19,21 @@ def get_last_build_error():
         return f"Failed to retrieve error logs: {str(e)}"
 
 def suggest_fix_llama3(error_log):
-    """Uses LLaMA 3.1 via OpenRouter to suggest a syntax fix"""
-    client = openai.OpenAI(
-        api_key=openai_api_key  # Use the OpenAI API key from secrets
-    )
-    completion = client.chat.completions.create(
-        extra_headers={
-            "HTTP-Referer": "http://example.com",  # Replace with your site URL
-            "X-Title": "AutoRepair Project",       # Replace with your project name
-        },
-        model="meta-llama/llama-3.1-405b-instruct",
-        messages=[
-            {
-                "role": "user",
-                "content": f"Provide a syntax-only fix for this Python error without explanation:\n{error_log}"
-            }
-        ]
-    )
-    return completion.choices[0].message.content
+    """Uses OpenAI's GPT model to suggest a syntax fix"""
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # You can adjust the model according to your needs
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Provide a syntax-only fix for this Python error without explanation:\n{error_log}"
+                }
+            ]
+        )
+        return response['choices'][0]['message']['content']
+    except Exception as e:
+        print(f"Error while communicating with OpenAI: {str(e)}")
+        return None
 
 def apply_fix(fix_suggestion):
     """Applies the fix to test.py"""
