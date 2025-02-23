@@ -22,7 +22,7 @@ def suggest_fix_llama3(error_log):
     """Uses OpenAI's GPT model to suggest a syntax fix"""
     try:
         response = openai.Completion.create(
-            model="gpt-3.5-turbo",  # You can adjust the model according to your needs
+            model="gpt-3.5-turbo",  # Use the correct model version
             prompt=f"Provide a syntax-only fix for this Python error without explanation:\n{error_log}",
             max_tokens=100
         )
