@@ -14,9 +14,9 @@ def get_last_build_error():
     try:
         with open("errors.txt", "r") as file:
             errors = file.read().strip()
-            return errors if errors else "No error logs captured."
+            return errors.split('\n')  # Split errors into a list of individual errors
     except Exception as e:
-        return f"Failed to retrieve error logs: {str(e)}"
+        return [f"Failed to retrieve error logs: {str(e)}"]
 
 def suggest_fix_llama3(error_log):
     """Uses OpenAI's GPT model to suggest a syntax fix"""
@@ -43,27 +43,32 @@ def apply_fix(fix_suggestion):
 
 def commit_and_push():
     """Commits and pushes changes to the repository"""
-    # Configure Git using the GitHub token from secrets
-    subprocess.run(f"git remote set-url origin https://{github_token}@github.com/Ayoub-Ajdour/TestPython.git", shell=True)
-    
-    subprocess.run("git config --global user.email 'ayoubajdour20@gmail.com'", shell=True)
-    subprocess.run("git config --global user.name 'Ayoub Ajdour'", shell=True)
-    subprocess.run("git add test.py", shell=True)
-    subprocess.run('git commit -m "Auto-fixed build issue"', shell=True)
-    subprocess.run("git push origin main", shell=True, check=True)
+    try:
+        subprocess.run(f"git remote set-url origin https://{github_token}@github.com/Ayoub-Ajdour/TestPython.git", shell=True, check=True)
+        subprocess.run("git config --global user.email 'ayoubajdour20@gmail.com'", shell=True, check=True)
+        subprocess.run("git config --global user.name 'Ayoub Ajdour'", shell=True, check=True)
+        subprocess.run("git add test.py", shell=True, check=True)
+        subprocess.run('git commit -m "Auto-fixed build issue"', shell=True, check=True)
+        subprocess.run("git push origin main", shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error while committing or pushing: {e}")
+        raise  # Re-raise the error to fail the Jenkins pipeline
 
 # Main execution
 error_log = get_last_build_error()
 print("Error Log:\n", error_log)
-if "No error logs" in error_log:
+if not error_log or "No error logs" in error_log:
     print("No errors detected.")
     exit(0)
 
-fix_suggestion = suggest_fix_llama3(error_log)
-print("Suggested Fix:\n", fix_suggestion)
+# Handle multiple errors
+for log in error_log:
+    fix_suggestion = suggest_fix_llama3(log)
+    print("Suggested Fix:\n", fix_suggestion)
 
-if apply_fix(fix_suggestion):
-    print("Fix applied. Committing changes...")
-    commit_and_push()
-else:
-    print("Failed to apply the fix.")
+    if fix_suggestion:
+        if apply_fix(fix_suggestion):
+            print("Fix applied. Committing changes...")
+            commit_and_push()
+        else:
+            print("Failed to apply the fix.")
