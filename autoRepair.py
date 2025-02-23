@@ -2,6 +2,10 @@ import openai
 import os
 import subprocess
 
+# Retrieve secrets from environment variables
+github_token = os.getenv('GH_TOKEN')
+openai_api_key = os.getenv('OPENAI_API_KEY')
+
 def get_last_build_error():
     """Reads the last pipeline error log from errors.txt"""
     try:
@@ -12,19 +16,24 @@ def get_last_build_error():
         return f"Failed to retrieve error logs: {str(e)}"
 
 def suggest_fix_llama3(error_log):
-    """Uses OpenAI API to suggest a syntax fix for the error"""
-    openai.api_key = "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"
-    
-    try:
-        completion = openai.Completion.create(
-            model="gpt-3.5-turbo",  # You can use the desired model here
-            prompt=f"Provide a syntax-only fix for this Python error without explanation:\n{error_log}",
-            max_tokens=100,
-            temperature=0.5
-        )
-        return completion.choices[0].text.strip()
-    except Exception as e:
-        return f"Error while communicating with OpenAI: {str(e)}"
+    """Uses LLaMA 3.1 via OpenRouter to suggest a syntax fix"""
+    client = openai.OpenAI(
+        api_key=openai_api_key  # Use the OpenAI API key from secrets
+    )
+    completion = client.chat.completions.create(
+        extra_headers={
+            "HTTP-Referer": "http://example.com",  # Replace with your site URL
+            "X-Title": "AutoRepair Project",       # Replace with your project name
+        },
+        model="meta-llama/llama-3.1-405b-instruct",
+        messages=[
+            {
+                "role": "user",
+                "content": f"Provide a syntax-only fix for this Python error without explanation:\n{error_log}"
+            }
+        ]
+    )
+    return completion.choices[0].message.content
 
 def apply_fix(fix_suggestion):
     """Applies the fix to test.py"""
@@ -38,16 +47,14 @@ def apply_fix(fix_suggestion):
 
 def commit_and_push():
     """Commits and pushes changes to the repository"""
-    subprocess.run("git config --global user.email 'jenkins@example.com'", shell=True)
-    subprocess.run("git config --global user.name 'Jenkins AutoFix'", shell=True)
-
-    # Replace with your GitHub username and token
-    subprocess.run("git remote set-url origin https://<USERNAME>:<TOKEN>@github.com/<USERNAME>/<REPO>.git", shell=True)
-
+    # Configure Git using the GitHub token from secrets
+    subprocess.run(f"git remote set-url origin https://{github_token}@github.com/Ayoub-Ajdour/TestPython.git", shell=True)
+    
+    subprocess.run("git config --global user.email 'ayoubajdour20@gmail.com'", shell=True)
+    subprocess.run("git config --global user.name 'Ayoub Ajdour'", shell=True)
     subprocess.run("git add test.py", shell=True)
     subprocess.run('git commit -m "Auto-fixed build issue"', shell=True)
     subprocess.run("git push origin main", shell=True, check=True)
-
 
 # Main execution
 error_log = get_last_build_error()
