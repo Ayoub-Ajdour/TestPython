@@ -40,13 +40,14 @@ def commit_and_push():
     """Commits and pushes changes to the repository"""
     subprocess.run("git config --global user.email 'jenkins@example.com'", shell=True)
     subprocess.run("git config --global user.name 'Jenkins AutoFix'", shell=True)
-    
-    # Add the remote credentials (username/password or token)
+
+    # Replace with your GitHub username and token
     subprocess.run("git remote set-url origin https://<USERNAME>:<TOKEN>@github.com/<USERNAME>/<REPO>.git", shell=True)
-    
+
     subprocess.run("git add test.py", shell=True)
     subprocess.run('git commit -m "Auto-fixed build issue"', shell=True)
     subprocess.run("git push origin main", shell=True, check=True)
+
 
 # Main execution
 error_log = get_last_build_error()
