@@ -21,12 +21,12 @@ def get_last_build_error():
 def suggest_fix_llama3(error_log):
     """Uses OpenAI's GPT model to suggest a syntax fix"""
     try:
-        response = openai.Completion.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",  # Use the correct model version
-            prompt=f"Provide a syntax-only fix for this Python error without explanation:\n{error_log}",
-            max_tokens=100
+            messages=[{"role": "system", "content": "You are an assistant that fixes code."},
+                      {"role": "user", "content": f"Provide a syntax-only fix for this Python error without explanation:\n{error_log}"}]
         )
-        return response['choices'][0]['text'].strip()
+        return response['choices'][0]['message']['content'].strip()
     except Exception as e:
         print(f"Error while communicating with OpenAI: {str(e)}")
         return None
