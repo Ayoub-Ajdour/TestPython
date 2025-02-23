@@ -1,2 +1,2 @@
-def test(a, B):
+def test(a, B)
     prin("test")  
