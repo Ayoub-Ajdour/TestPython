@@ -1,0 +1,32 @@
+name: Python CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Set environment variables for secrets
+      run: |
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> $GITHUB_ENV
+        echo "GH_TOKEN=${{ secrets.GH_TOKEN }}" >> $GITHUB_ENV
+
+    - name: Run your Python script
+      run: |
+        python your_script.py
