@@ -2,21 +2,43 @@ import os
 import subprocess
 
 github_token = os.getenv("GITHUB_TOKEN")
-openai_api_key = os.getenv("OPENAI_API_KEY")
 
 def get_last_build_error():
+    """Reads the last pipeline error log from errors.txt"""
     try:
         with open("errors.txt", "r") as file:
             return file.read().strip().split('\n')
     except Exception as e:
         return [f"Failed to retrieve error logs: {str(e)}"]
 
-def suggest_fix_hardcoded(error_log):
+def suggest_fix_rule_based(error_log):
+    """Rule-based fixer for common Python syntax errors"""
     if "SyntaxError: expected ':'" in error_log:
-        return "def test(a, B):"  
-    return None
+        return "def test(a, B):"  # Fix missing colon in function definition
+    elif "SyntaxError: incomplete input" in error_log or "SyntaxError: unexpected EOF" in error_log:
+        # Fix missing closing parenthesis or incomplete line
+        try:
+            with open("test.py", "r") as f:
+                line = f.read().strip()
+                if line.startswith("print(") and not line.endswith(")"):
+                    return f"{line})"
+                elif line.startswith("def ") and not line.endswith(":"):
+                    return f"{line}:"
+        except Exception:
+            return None
+    elif "IndentationError" in error_log:
+        # Fix basic indentation (assumes 4-space indent)
+        try:
+            with open("test.py", "r") as f:
+                lines = f.readlines()
+                fixed_lines = ["    " + line.strip() if line.strip() else line for line in lines]
+                return "".join(fixed_lines)
+        except Exception:
+            return None
+    return None  # Return None if no rule matches
 
 def apply_fix(fix_suggestion):
+    """Applies the fix to test.py"""
     try:
         with open("test.py", "w") as f:
             f.write(fix_suggestion)
@@ -26,6 +48,7 @@ def apply_fix(fix_suggestion):
         return False
 
 def commit_and_push():
+    """Commits and pushes changes to the repository"""
     try:
         subprocess.run(f"git remote set-url origin https://{github_token}@github.com/Ayoub-Ajdour/TestPython.git", shell=True, check=True)
         subprocess.run("git config --global user.email 'ayoubajdour20@gmail.com'", shell=True, check=True)
@@ -47,7 +70,7 @@ if not error_message:
     exit(0)
 
 print("Processing Error:\n", error_message)
-fix_suggestion = suggest_fix_hardcoded(error_message)  # Use hardcoded fix instead of OpenAI
+fix_suggestion = suggest_fix_rule_based(error_message)
 print("Suggested Fix:\n", fix_suggestion)
 
 if fix_suggestion:
@@ -57,4 +80,4 @@ if fix_suggestion:
     else:
         print("Failed to apply the fix.")
 else:
-    print("No fix suggested.")
+    print("No fix suggested for this error.")
