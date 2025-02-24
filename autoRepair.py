@@ -1,41 +1,44 @@
 import os
 import subprocess
+from openai import OpenAI
 
+# Retrieve GitHub token from environment variable
 github_token = os.getenv("GITHUB_TOKEN")
+if not github_token:
+    print("Error: GITHUB_TOKEN environment variable not set.")
+    exit(1)
 
 def get_last_build_error():
     """Reads the last pipeline error log from errors.txt"""
     try:
         with open("errors.txt", "r") as file:
-            return file.read().strip().split('\n')
+            errors = file.read().strip()
+            return errors if errors else "No error logs captured."
     except Exception as e:
-        return [f"Failed to retrieve error logs: {str(e)}"]
+        return f"Failed to retrieve error logs: {str(e)}"
 
-def suggest_fix_rule_based(error_log):
-    """Rule-based fixer for common Python syntax errors"""
-    if "SyntaxError: expected ':'" in error_log:
-        return "def test(a, B):"  # Fix missing colon in function definition
-    elif "SyntaxError: incomplete input" in error_log or "SyntaxError: unexpected EOF" in error_log:
-        # Fix missing closing parenthesis or incomplete line
-        try:
-            with open("test.py", "r") as f:
-                line = f.read().strip()
-                if line.startswith("print(") and not line.endswith(")"):
-                    return f"{line})"
-                elif line.startswith("def ") and not line.endswith(":"):
-                    return f"{line}:"
-        except Exception:
-            return None
-    elif "IndentationError" in error_log:
-        # Fix basic indentation (assumes 4-space indent)
-        try:
-            with open("test.py", "r") as f:
-                lines = f.readlines()
-                fixed_lines = ["    " + line.strip() if line.strip() else line for line in lines]
-                return "".join(fixed_lines)
-        except Exception:
-            return None
-    return None  # Return None if no rule matches
+def suggest_fix_llama3_70(error_log):
+    """Uses OpenRouter's LLaMA 3.1 405B to suggest a syntax fix"""
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key="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",  # Your OpenRouter API key
+    )
+    try:
+        completion = client.chat.completions.create(
+            extra_headers={
+                "HTTP-Referer": "https://your-site.com",  # Replace with your site or leave as-is
+                "X-Title": "Jenkins Auto-Repair",         # Optional name for OpenRouter rankings
+            },
+            model="meta-llama/llama-3.1-405b-instruct",
+            messages=[
+                {"role": "system", "content": "You are a code-fixing assistant. Provide only the corrected syntax for the given Python error, no explanations."},
+                {"role": "user", "content": f"Fix this Python error:\n{error_log}"}
+            ]
+        )
+        return completion.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error while communicating with OpenRouter: {str(e)}")
+        return None
 
 def apply_fix(fix_suggestion):
     """Applies the fix to test.py"""
@@ -63,14 +66,11 @@ def commit_and_push():
 # Main execution
 error_log = get_last_build_error()
 print("Error Log:\n", error_log)
-
-error_message = next((line for line in error_log if "SyntaxError" in line or "Error" in line), None)
-if not error_message:
-    print("No actionable errors detected.")
+if "No error logs" in error_log or not error_log:
+    print("No errors detected.")
     exit(0)
 
-print("Processing Error:\n", error_message)
-fix_suggestion = suggest_fix_rule_based(error_message)
+fix_suggestion = suggest_fix_llama3_70(error_log)
 print("Suggested Fix:\n", fix_suggestion)
 
 if fix_suggestion:
@@ -80,4 +80,4 @@ if fix_suggestion:
     else:
         print("Failed to apply the fix.")
 else:
-    print("No fix suggested for this error.")
+    print("No fix suggested.")
