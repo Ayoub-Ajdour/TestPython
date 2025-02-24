@@ -1,1 +1,2 @@
-def test(a, B):
+def test(a, b) 
+    print(a + b)
