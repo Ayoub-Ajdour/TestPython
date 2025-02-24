@@ -21,13 +21,13 @@ def suggest_fix_llama3_70(error_log):
     """Uses OpenRouter's LLaMA 3.1 405B to suggest a syntax fix"""
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
-        api_key="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",  # Your OpenRouter API key
+        api_key="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",
     )
     try:
         completion = client.chat.completions.create(
             extra_headers={
-                "HTTP-Referer": "https://your-site.com",  # Replace with your site or leave as-is
-                "X-Title": "Jenkins Auto-Repair",         # Optional name for OpenRouter rankings
+                "HTTP-Referer": "https://your-site.com",
+                "X-Title": "Jenkins Auto-Repair",
             },
             model="meta-llama/llama-3.1-405b-instruct",
             messages=[
