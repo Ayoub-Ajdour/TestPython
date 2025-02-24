@@ -1,6 +1,6 @@
 import os
 import subprocess
-from openai import OpenAI
+import requests
 
 # Retrieve GitHub token from environment variable
 github_token = os.getenv("GITHUB_TOKEN")
@@ -18,20 +18,26 @@ def get_last_build_error():
         return f"Failed to retrieve error logs: {str(e)}"
 
 def suggest_fix_llama3_70(error_log):
-    """Uses OpenRouter's LLaMA 3.1 405B to suggest a syntax fix"""
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key="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",
-    )
+    """Uses OpenRouter's LLaMA 3.1 405B via direct API call"""
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    api_key = "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"  # Your OpenRouter key
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://your-site.com",  # Optional
+        "X-Title": "Jenkins Auto-Repair",         # Optional
+    }
+    payload = {
+        "model": "meta-llama/llama-3.1-405b-instruct",
+        "messages": [
+            {"role": "system", "content": "You are a code-fixing assistant. Provide only the corrected syntax for the given Python error, no explanations."},
+            {"role": "user", "content": f"Fix this Python error:\n{error_log}"}
+        ]
+    }
     try:
-        completion = client.chat.completions.create(
-            model="meta-llama/llama-3.1-405b-instruct",
-            messages=[
-                {"role": "system", "content": "You are a code-fixing assistant. Provide only the corrected syntax for the given Python error, no explanations."},
-                {"role": "user", "content": f"Fix this Python error:\n{error_log}"}
-            ]
-        )
-        return completion.choices[0].message.content.strip()
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()  # Raise exception for bad status codes
+        return response.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
         print(f"Error while communicating with OpenRouter: {str(e)}")
         return None
