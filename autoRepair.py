@@ -20,7 +20,7 @@ def get_last_build_error():
 def suggest_fix_llama3_70(error_log):
     """Uses OpenRouter's LLaMA 3.1 405B via direct API call"""
     url = "https://openrouter.ai/api/v1/chat/completions"
-    api_key = "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"  # Your OpenRouter key
+    api_key = "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" 
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
