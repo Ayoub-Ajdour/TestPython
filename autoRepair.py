@@ -1,6 +1,7 @@
 import os
 import subprocess
 import requests
+import re
 
 # Retrieve GitHub token from environment variable
 github_token = os.getenv("GITHUB_TOKEN")
@@ -37,14 +38,19 @@ def suggest_fix_llama3_70(error_log):
     payload = {
         "model": "meta-llama/llama-3.1-405b-instruct",
         "messages": [
-            {"role": "system", "content": "You are a code-fixing assistant. Given the Python error and the original code, provide the complete corrected code with the error fixed. Preserve all original functionality, such as return statements or other lines, exactly as they appear. If additional lines are missing (e.g., after a colon), infer the intent from the context (e.g., 'return a + b' for a function with parameters 'a' and 'b') rather than adding 'pass' unless no intent is evident."},
-            {"role": "user", "content": f"Original code:\n{original_code}\n\nError:\n{error_log}\n\nReturn the full corrected Python code."}
+            {"role": "system", "content": "You are a code-fixing assistant. Given the Python error and the original code, return ONLY the complete corrected Python code with the error fixed and all original functionality preserved. Do not include any explanations, markdown, or extra text—just the raw code. If the code is incomplete, infer the intent (e.g., 'return a + b' for a function with parameters 'a' and 'b') rather than adding 'pass' unless no intent is clear."},
+            {"role": "user", "content": f"Original code:\n{original_code}\n\nError:\n{error_log}\n\nReturn only the fixed Python code, nothing else."}
         ]
     }
     try:
         response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"].strip()
+        fix_suggestion = response.json()["choices"][0]["message"]["content"].strip()
+        # Post-process to extract just the code (in case model adds extra text)
+        # Look for Python code lines, ignoring markdown or prose
+        lines = fix_suggestion.splitlines()
+        code_lines = [line for line in lines if line.strip() and not line.strip().startswith(("#", "```", "Here", "Explanation"))]
+        return "\n".join(code_lines).strip()
     except Exception as e:
         print(f"Error while communicating with OpenRouter: {str(e)}")
         return None
@@ -58,35 +64,3 @@ def apply_fix(fix_suggestion):
     except Exception as e:
         print(f"Failed to apply fix: {str(e)}")
         return False
-
-def commit_and_push():
-    """Commits and pushes changes to the repository"""
-    try:
-        subprocess.run(f"git remote set-url origin https://{github_token}@github.com/Ayoub-Ajdour/TestPython.git", shell=True, check=True)
-        subprocess.run("git config --global user.email 'ayoubajdour20@gmail.com'", shell=True, check=True)
-        subprocess.run("git config --global user.name 'Ayoub Ajdour'", shell=True, check=True)
-        subprocess.run("git add test.py", shell=True, check=True)
-        subprocess.run('git commit -m "Auto-fixed build issue"', shell=True, check=True)
-        subprocess.run("git push origin main", shell=True, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error while committing or pushing: {e}")
-        raise
-
-# Main execution
-error_log = get_last_build_error()
-print("Error Log:\n", error_log)
-if "No error logs" in error_log or not error_log:
-    print("No errors detected.")
-    exit(0)
-
-fix_suggestion = suggest_fix_llama3_70(error_log)
-print("Suggested Fix:\n", fix_suggestion)
-
-if fix_suggestion:
-    if apply_fix(fix_suggestion):
-        print("Fix applied. Committing changes...")
-        commit_and_push()
-    else:
-        print("Failed to apply the fix.")
-else:
-    print("No fix suggested.")
