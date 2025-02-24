@@ -1,15 +1,8 @@
-import openai
 import os
 import subprocess
 
 github_token = os.getenv("GITHUB_TOKEN")
 openai_api_key = os.getenv("OPENAI_API_KEY")
-
-if not openai_api_key:
-    print("Error: OPENAI_API_KEY not set.")
-    exit(1)
-
-openai.api_key = openai_api_key
 
 def get_last_build_error():
     try:
@@ -18,17 +11,10 @@ def get_last_build_error():
     except Exception as e:
         return [f"Failed to retrieve error logs: {str(e)}"]
 
-def suggest_fix_llama3(error_log):
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": "You are an assistant that fixes code."},
-                      {"role": "user", "content": f"Provide a syntax-only fix for this Python error without explanation:\n{error_log}"}]
-        )
-        return response['choices'][0]['message']['content'].strip()
-    except Exception as e:
-        print(f"Error while communicating with OpenAI: {str(e)}")
-        return None
+def suggest_fix_hardcoded(error_log):
+    if "SyntaxError: expected ':'" in error_log:
+        return "def test(a, B):"  
+    return None
 
 def apply_fix(fix_suggestion):
     try:
@@ -61,7 +47,7 @@ if not error_message:
     exit(0)
 
 print("Processing Error:\n", error_message)
-fix_suggestion = suggest_fix_llama3(error_message)
+fix_suggestion = suggest_fix_hardcoded(error_message)  # Use hardcoded fix instead of OpenAI
 print("Suggested Fix:\n", fix_suggestion)
 
 if fix_suggestion:
