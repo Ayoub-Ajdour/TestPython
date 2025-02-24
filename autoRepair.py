@@ -20,23 +20,31 @@ def get_last_build_error():
 def suggest_fix_llama3_70(error_log):
     """Uses OpenRouter's LLaMA 3.1 405B via direct API call"""
     url = "https://openrouter.ai/api/v1/chat/completions"
-    api_key = "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" 
+    api_key = "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"  # Your working key
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://your-site.com",  # Optional
-        "X-Title": "Jenkins Auto-Repair",         # Optional
+        "HTTP-Referer": "https://your-site.com",
+        "X-Title": "Jenkins Auto-Repair",
     }
+    # Read the original file content to include in the prompt
+    try:
+        with open("test.py", "r") as f:
+            original_code = f.read().strip()
+    except Exception as e:
+        original_code = ""
+        print(f"Warning: Could not read test.py: {str(e)}")
+
     payload = {
         "model": "meta-llama/llama-3.1-405b-instruct",
         "messages": [
-            {"role": "system", "content": "You are a code-fixing assistant. Provide only the corrected syntax for the given Python error, no explanations."},
-            {"role": "user", "content": f"Fix this Python error:\n{error_log}"}
+            {"role": "system", "content": "You are a code-fixing assistant. Given the Python error and the original code, provide the complete corrected code, preserving all functionality."},
+            {"role": "user", "content": f"Original code:\n{original_code}\n\nError:\n{error_log}\n\nFix the error and return the full corrected code."}
         ]
     }
     try:
         response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()  # Raise exception for bad status codes
+        response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
         print(f"Error while communicating with OpenRouter: {str(e)}")
