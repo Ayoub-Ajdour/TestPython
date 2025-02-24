@@ -20,14 +20,14 @@ def get_last_build_error():
 def suggest_fix_llama3_70(error_log):
     """Uses OpenRouter's LLaMA 3.1 405B via direct API call"""
     url = "https://openrouter.ai/api/v1/chat/completions"
-    api_key = "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"  # Your working key
+    api_key = "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"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://your-site.com",
         "X-Title": "Jenkins Auto-Repair",
     }
-    # Read the original file content to include in the prompt
+    # Include original code in the prompt
     try:
         with open("test.py", "r") as f:
             original_code = f.read().strip()
@@ -38,8 +38,8 @@ def suggest_fix_llama3_70(error_log):
     payload = {
         "model": "meta-llama/llama-3.1-405b-instruct",
         "messages": [
-            {"role": "system", "content": "You are a code-fixing assistant. Given the Python error and the original code, provide the complete corrected code, preserving all functionality."},
-            {"role": "user", "content": f"Original code:\n{original_code}\n\nError:\n{error_log}\n\nFix the error and return the full corrected code."}
+            {"role": "system", "content": "You are a code-fixing assistant. Given the Python error and the original code, provide the complete corrected code with the error fixed and all original functionality preserved. If the original code is incomplete, add a sensible default like 'pass' or restore likely intent (e.g., a return statement)."},
+            {"role": "user", "content": f"Original code:\n{original_code}\n\nError:\n{error_log}\n\nReturn the full corrected Python code."}
         ]
     }
     try:
