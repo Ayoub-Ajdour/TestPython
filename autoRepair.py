@@ -27,7 +27,6 @@ def suggest_fix_llama3_70(error_log):
         "HTTP-Referer": "https://your-site.com",
         "X-Title": "Jenkins Auto-Repair",
     }
-    # Include original code in the prompt
     try:
         with open("test.py", "r") as f:
             original_code = f.read().strip()
@@ -38,7 +37,7 @@ def suggest_fix_llama3_70(error_log):
     payload = {
         "model": "meta-llama/llama-3.1-405b-instruct",
         "messages": [
-            {"role": "system", "content": "You are a code-fixing assistant. Given the Python error and the original code, provide the complete corrected code with the error fixed and all original functionality preserved. If the original code is incomplete, add a sensible default like 'pass' or restore likely intent (e.g., a return statement)."},
+            {"role": "system", "content": "You are a code-fixing assistant. Given the Python error and the original code, provide the complete corrected code with the error fixed and all original functionality preserved. If the code is incomplete (e.g., missing a body), infer the likely intent (e.g., a return statement like 'return a + b' for a function with two parameters) rather than just adding 'pass', unless no intent is clear."},
             {"role": "user", "content": f"Original code:\n{original_code}\n\nError:\n{error_log}\n\nReturn the full corrected Python code."}
         ]
     }
