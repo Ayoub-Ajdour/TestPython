@@ -25,10 +25,6 @@ def suggest_fix_llama3_70(error_log):
     )
     try:
         completion = client.chat.completions.create(
-            extra_headers={
-                "HTTP-Referer": "https://your-site.com",
-                "X-Title": "Jenkins Auto-Repair",
-            },
             model="meta-llama/llama-3.1-405b-instruct",
             messages=[
                 {"role": "system", "content": "You are a code-fixing assistant. Provide only the corrected syntax for the given Python error, no explanations."},
