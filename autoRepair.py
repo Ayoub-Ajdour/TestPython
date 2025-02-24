@@ -3,14 +3,12 @@ import subprocess
 import requests
 import re
 
-# Retrieve GitHub token from environment variable
 github_token = os.getenv("GITHUB_TOKEN")
 if not github_token:
     print("Error: GITHUB_TOKEN environment variable not set.")
     exit(1)
 
 def get_last_build_error():
-    """Reads the last pipeline error log from errors.txt"""
     try:
         with open("errors.txt", "r") as file:
             errors = file.read().strip()
@@ -19,7 +17,6 @@ def get_last_build_error():
         return f"Failed to retrieve error logs: {str(e)}"
 
 def suggest_fix_llama3_70(error_log):
-    """Uses OpenRouter's LLaMA 3.1 405B via direct API call"""
     url = "https://openrouter.ai/api/v1/chat/completions"
     api_key = "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"
     headers = {
@@ -46,8 +43,6 @@ def suggest_fix_llama3_70(error_log):
         response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
         fix_suggestion = response.json()["choices"][0]["message"]["content"].strip()
-        # Post-process to extract just the code (in case model adds extra text)
-        # Look for Python code lines, ignoring markdown or prose
         lines = fix_suggestion.splitlines()
         code_lines = [line for line in lines if line.strip() and not line.strip().startswith(("#", "```", "Here", "Explanation"))]
         return "\n".join(code_lines).strip()
@@ -56,7 +51,6 @@ def suggest_fix_llama3_70(error_log):
         return None
 
 def apply_fix(fix_suggestion):
-    """Applies the fix to test.py"""
     try:
         with open("test.py", "w") as f:
             f.write(fix_suggestion)
@@ -64,3 +58,24 @@ def apply_fix(fix_suggestion):
     except Exception as e:
         print(f"Failed to apply fix: {str(e)}")
         return False
+
+def commit_and_push():
+    try:
+        subprocess.run(f"git remote set-url origin https://{github_token}@github.com/Ayoub-Ajdour/TestPython.git", shell=True, check=True)
+        subprocess.run("git config --global user.email 'ayoubajdour20@gmail.com'", shell=True, check=True)
+        subprocess.run("git config --global user.name 'Ayoub Ajdour'", shell=True, check=True)
+        subprocess.run("git add test.py", shell=True, check=True)
+        subprocess.run('git commit -m "Auto-fixed build issue"', shell=True, check=True)
+        subprocess.run("git push origin main", shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error while committing or pushing: {e}")
+        raise
+
+error_log = get_last_build_error()
+print("Error Log:\n", error_log)
+if "No error logs" in error_log or not error_log:
+    print("No errors detected.")
+    exit(0)
+
+fix_suggestion = suggest_fix_llama3_70(error_log)
+print("Suggested Fix:\n", fix_suggestion)
