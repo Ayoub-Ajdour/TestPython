@@ -3,9 +3,8 @@ import os
 import subprocess
 
 # Retrieve secrets from environment variables
-github_token = "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"
-openai_api_key = "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"
-
+github_token = os.getenv("GITHUB_TOKEN")
+openai_api_key = os.getenv("OPENAI_API_KEY")
 # Set the OpenAI API key for the session
 openai.api_key = openai_api_key  # Use the OpenAI API key from secrets
 
