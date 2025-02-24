@@ -37,7 +37,7 @@ def suggest_fix_llama3_70(error_log):
     payload = {
         "model": "meta-llama/llama-3.1-405b-instruct",
         "messages": [
-            {"role": "system", "content": "You are a code-fixing assistant. Given the Python error and the original code, provide the complete corrected code with the error fixed and all original functionality preserved. If the code is incomplete (e.g., missing a body), infer the likely intent (e.g., a return statement like 'return a + b' for a function with two parameters) rather than just adding 'pass', unless no intent is clear."},
+            {"role": "system", "content": "You are a code-fixing assistant. Given the Python error and the original code, provide the complete corrected code with the error fixed. Preserve all original functionality, such as return statements or other lines, exactly as they appear. If additional lines are missing (e.g., after a colon), infer the intent from the context (e.g., 'return a + b' for a function with parameters 'a' and 'b') rather than adding 'pass' unless no intent is evident."},
             {"role": "user", "content": f"Original code:\n{original_code}\n\nError:\n{error_log}\n\nReturn the full corrected Python code."}
         ]
     }
